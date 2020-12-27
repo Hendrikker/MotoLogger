@@ -1,52 +1,125 @@
-def exportGPX(data, savefile):
+def LOGtoGPX(savefile, pretty=False):
     import xml.etree.cElementTree as ET
     gpx = ET.Element("gpx", creator="MotoLogger", version="1.1")
     trk = ET.SubElement(gpx, "trk")
     trkseg = ET.SubElement(trk, "trkseg")
-    for dataline in data:
-        trkpt = ET.SubElement(trkseg, "trkpt", lat=str(dataline[1]), lon=str(dataline[2]))
+
+    log = open(savefile, "r")
+    header = log.readline()
+    line = log.readline().split(',')
+    while line != ['']:
+        #print(line)
+        trkpt = ET.SubElement(trkseg, "trkpt", lat=str(line[1]), lon=str(line[2]))
         ele = ET.SubElement(trkpt, "ele")
-        ele.text = str(dataline[3])
-        geoid = ET.SubElement(trkpt, "geoidheight")
-        geoid.text = str(dataline[6])
+        ele.text = str(line[3])
         fix = ET.SubElement(trkpt, "fix")
         fix.text = "3d"
-        sat = ET.SubElement(trkpt, "sat")
-        sat.text = str(dataline[4])
         hdop = ET.SubElement(trkpt, "hdop")
-        hdop.text = str(dataline[5])
-
+        hdop.text = str(line[5])
+        line = log.readline().split(',')
+        #time
+    log.close()
+    savefile = savefile.strip(".txt")
     tree = ET.ElementTree(gpx)
-    tree.write(savefile+".gpx")
+    if pretty == True:
+        from xml.dom import minidom
+        xmlstr = minidom.parseString(ET.tostring(gpx)).toprettyxml(indent="   ")
+        gpxfile = open(savefile + ".gpx", "w")
+        gpxfile.write(xmlstr)
+        gpxfile.close()
+    else:
+        tree.write(savefile + ".gpx")
 
-def exportGEOJSON(data, savefile):
+def LOGtoGEOJSON(savefile, pretty=False):
     import json
     master = {"type":"FeatureCollection", "features":[]}
     linepoints = []
-    for dataline in data:
-        linepoints.append([dataline[1], dataline[2]])
+
+    log = open(savefile, "r")
+    header = log.readline()
+    line = log.readline().split(',')
+    while line != ['']:
+        #print(line)
+        coords = [float(line[2]), float(line[1])]
+        linepoints.append(coords)
         pointfeature = {"type":"Feature",
-                   "geometry":{"type":"Point", "coordinates":[dataline[1], dataline[2]]},
-                   "properties":{"elevation":dataline[3],
-                                 "number of satellites":dataline[4],
-                                 "hdop":dataline[5],
-                                 "geoid height":dataline[6],
-                                 "valid fix": dataline[7],
-                                 "acceleration X":dataline[8],
-                                 "acceleration Y":dataline[9],
-                                 "acceleration Z":dataline[10],
-                                 "gyro X":dataline[11],
-                                 "gyro Y":dataline[12],
-                                 "gyro Z":dataline[13]
+                   "geometry":{"type":"Point", "coordinates":coords},
+                   "properties":{"elevation":float(line[3]),
+                                 "bearing": toFloat(line[4]),
+                                 "speed":toFloat(line[5]),
+                                 "nsat":int(line[8]),
+                                 "HDOP":float(line[9]),
+                                 "VDOP":float(line[10]),
+                                 "PDOP":float(line[11]),
+                                 "geoid":float(line[7]),
+                                 "fix": line[12]
                                  }
                    }
-        master["features"].append(pointfeature)
-        
+        if (float(line[11])<=3):
+            master["features"].append(pointfeature)
+        line = log.readline().split(',')
+    log.close()
+
     linefeature = {"type":"Feature",
                    "geometry":{"type":"LineString",
                                "coordinates":linepoints}}
     master["features"].append(linefeature)
-    master_json = json.dumps(master)
+    savefile = savefile.strip(".txt")
     text_file = open(savefile + ".json", "w")
-    text_file.write(master_json)
+    if pretty==True:
+        text_file.write(json.dumps(master, sort_keys=True, indent=4))
+    else:
+        json.dump(master, text_file)
     text_file.close()
+
+def SATtoJSON(savefile, pretty=False):
+    import json
+    sats = {}
+    sats2 = {}
+
+    log = open(savefile, "r")
+    header = log.readline()
+    line = log.readline().split(',')
+
+    while line != ['']:
+        line = log.readline().split(',')
+        for i in list(range(1, len(line), 5)):
+            ID = line[i] + line[i+1]
+            if line[i+2] != "" and line[i+3] != "":
+                epoch = [float(line[i+2]), float(line[i+3])]
+                if ID not in sats.keys():
+                    sats2[ID] = [epoch]
+                    sats[ID] = {}
+                    sats[ID]["Time"] = [line[0]]
+                    sats[ID]["Elevation"] = [float(line[i+2])]
+                    sats[ID]["Azimuth"] = [float(line[i+3])]
+                    sats[ID]["SNR"] = [line[i+4].strip("\n")]
+                else:
+                    sats2[ID].append(epoch)
+                    sats[ID]["Time"].append(line[0])
+                    sats[ID]["Elevation"].append(float(line[i+2]))
+                    sats[ID]["Azimuth"].append(float(line[i+3]))
+                    sats[ID]["SNR"].append(line[i+4].strip("\n"))
+    log.close()
+    savefile = savefile.strip(".txt")
+    text_file = open(savefile + ".json", "w")
+    if pretty==True:
+        text_file.write(json.dumps(sats, sort_keys=True, indent=4))
+    else:
+        json.dump(sats, text_file)
+    text_file.close()
+    
+def toFloat(line):
+    if len(line) == 0:
+        return 0
+    else:
+        return float(line)
+
+def SupplementSpeed(savefile):
+    log = open(savefile, "r")
+    header = log.readline()
+    line = log.readline().split(',')
+
+#LOGtoGPX("./data/20122020_011103")
+#LOGtoGEOJSON("./data/20122020_011103")
+#SATtoJSON("./data/20122020_011103_sats", True)

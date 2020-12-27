@@ -6,27 +6,23 @@ from subprocess import check_call
 import time
 import os
 import serial
-import NMEA
 import export
-
-# initialize serial port for gps
-os.system("sudo gpsd /dev/ttyAMA0 -F /var/run/gpsd.sock")
-port = "/dev/serial0"
-serialPort = serial.Serial(port, baudrate = 9600, timeout = 0.5)
 
 # output
 now = datetime.now()
 now_string = now.strftime("%d%m%Y_%H%M%S")
-datafolder = "/home/pi/MotoLoggerV2/data/"
+maindir = os.path.realpath(__file__)
+datafolder = maindir.replace("main.py", "data/") + now_string + "/"
+os.mkdir(datafolder)
 savefile = datafolder + now_string + ".txt"
 print("file: " + savefile)
 file=open(savefile, 'w')
+file.write("Time of Day,Lattitude,Longitude,Altitude,Bearing,Speed,Empty,Geoid,Number of Satellites,HDOP,VDOP,PDOP,FIX\n")
 file.close()
 
-#
+# Activity booleans
 active = True
 savesat = False
-
 if savesat == True:
     satsavefile = datafolder + now_string + "_sats.txt"
 
@@ -37,6 +33,14 @@ green = LED(17)
 iobutton = Button(24)
 iolight = LED(18)
 shutdown_btn = Button(7, hold_time=1)
+
+# initialize serial port for gps
+#os.system("sudo systemctl stop gpsd.socket")
+os.system("sudo gpsd /dev/ttyAMA0 -F /var/run/gpsd.sock")
+port = "/dev/ttyAMA0"
+#/dev/serial0
+serialPort = serial.Serial(port, baudrate = 9600)#, timeout = 0.1)
+#time.sleep(20)
 
 # events functions
 # logging button start
@@ -61,7 +65,8 @@ shutdown_btn.when_held = shutdown
 green.on()
 
 started = False
-
+epoch = ['']*13
+sats = [None]
 try:
     while active == True:
         green.on()
@@ -69,9 +74,9 @@ try:
         if iobutton.is_pressed:
             pass
         else:
+            nmea = ["-"]
             # GPS reading
             serialData = serialPort.readline()
-            nmea = ["-"]
             try:
                 nmea = serialData.decode('utf-8').split(',')
             except:
@@ -104,13 +109,11 @@ try:
                         file.write(line)
                         file.close()
                     if savesat == True and sats[0] != None:
-                        satline = ",".join(sats) + "\n"
-                        satfile=open(satsavefile, 'a')
-                        satfile.write(satline)
-                        satfile.close()
-                        
-                    #print("epoch saved")
-                    
+                        #satline = ",".join(sats) + "\n"
+                        #satfile=open(satsavefile, 'a')
+                        #satfile.write(satline)
+                        #satfile.close()
+                        pass 
                 if nmeatype == "GGA":
                     #print("processing GGA")
                     #print(nmea)
@@ -196,13 +199,13 @@ try:
                     speed = nmea[7]
                     epoch[5] = speed
 finally:
-    #export.GEOJSON(GGA, "data/"+savefile+"_GGA")
-    #export.GPX(GGA, "data/"+savefile)
-    #GPIO.setmode(GPIO.BCM)
     white.off()
     green.off()
     red.on()
-    time.sleep(1)
+    export.LOGtoGPX(savefile)
+    export.LOGtoGEOJSON(savefile)
+    #export.SATtoJSON(satsavefile)
+    time.sleep(0.5)
     red.off()
     #check_call(['sudo', 'poweroff'])
     #GPIO.cleanup()
