@@ -11,10 +11,12 @@ import export
 # output
 now = datetime.now()
 now_string = now.strftime("%d%m%Y_%H%M%S")
-maindir = os.path.realpath(__file__)
-datafolder = maindir.replace("main.py", "data/")
-if not os.path.exists('data'):
+mainfolder = "/home/pi/"
+datafolder = mainfolder + "/MotoLoggerData/"
+try:
     os.mkdir(datafolder)
+except FileExistsError:
+    pass
 timefolder = datafolder + now_string + "/"
 os.mkdir(timefolder)
 savefile = timefolder + now_string + ".txt"
