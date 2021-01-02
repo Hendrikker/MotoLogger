@@ -70,15 +70,17 @@ sats = [None]
 try:
     while active == True:
         green.on()
-        #time.sleep(0.5)
+        nmea = ["-"]
+        try:
+            serialData = serialPort.readline()
+        except:
+            pass
         if iobutton.is_pressed:
             pass
         else:
-            nmea = ["-"]
-            # GPS reading
-            serialData = serialPort.readline()
             try:
                 nmea = serialData.decode('utf-8').split(',')
+                red.off()
             except:
                 print("decode error")
             if nmea != "-":
