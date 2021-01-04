@@ -7,6 +7,7 @@ import time
 import os
 import serial
 import export
+import NMEA
 
 # output
 now = datetime.now()
@@ -89,24 +90,11 @@ try:
             except:
                 print("decode error")
             if nmea != "-":
+                NMEA.Read(nmea)
+
+                """
                 nmeatype =  nmea[0][3:]
                 #print(nmea)
-                """
-                epoch = [time,
-                        lattitude,
-                        longitude,
-                        altitude,
-                        bearing,
-                        speed,
-                        ,
-                        geoid,
-                        #satelites,
-                        HDOP,
-                        VDOP,
-                        PDOP,
-                        Fix
-                        ]
-                """
                 if started == True and nmeatype == 'GGA':
                     if epoch[0] != "":
                         print(epoch)
@@ -205,6 +193,7 @@ try:
                     # speed over ground in kph
                     speed = nmea[7]
                     epoch[5] = speed
+                    """
 finally:
     white.off()
     green.off()
