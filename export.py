@@ -1,3 +1,23 @@
+def createfile():
+    from datetime import datetime
+    import os
+    now = datetime.now()
+    now_string = now.strftime("%d%m%Y_%H%M%S")
+    mainfolder = "/home/pi/"
+    datafolder = mainfolder + "MotoLoggerData/"
+    try:
+        os.mkdir(datafolder)
+    except FileExistsError:
+        pass
+    timefolder = datafolder + now_string + "/"
+    os.mkdir(timefolder)
+    savefile = timefolder + now_string + ".txt"
+    print("file: " + savefile)
+    file=open(savefile, 'w')
+    file.write("Time of Day,Lattitude,Longitude,Altitude,Bearing,Speed,Empty,Geoid,Number of Satellites,HDOP,VDOP,PDOP,FIX\n")
+    file.close()
+    return savefile
+
 def LOGtoGPX(savefile, pretty=False):
     import xml.etree.cElementTree as ET
     gpx = ET.Element("gpx", creator="MotoLogger", version="1.1")

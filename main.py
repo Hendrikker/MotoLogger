@@ -1,78 +1,43 @@
-# imports
-from datetime import datetime
-from gpiozero import *
 import RPi.GPIO as GPIO
-from subprocess import check_call
+from gpiozero import LED, Button
 import time
+from datetime import datetime
 import os
 import serial
 import export
 import NMEA
 
-# output
-now = datetime.now()
-now_string = now.strftime("%d%m%Y_%H%M%S")
-mainfolder = "/home/pi/"
-datafolder = mainfolder + "/MotoLoggerData/"
-try:
-    os.mkdir(datafolder)
-except FileExistsError:
-    pass
-timefolder = datafolder + now_string + "/"
-os.mkdir(timefolder)
-savefile = timefolder + now_string + ".txt"
-print("file: " + savefile)
-file=open(savefile, 'w')
-file.write("Time of Day,Lattitude,Longitude,Altitude,Bearing,Speed,Empty,Geoid,Number of Satellites,HDOP,VDOP,PDOP,FIX\n")
-file.close()
-
-# Activity booleans
+started = False
+epoch = ['']*13
 active = True
 savesat = False
-if savesat == True:
-    satsavefile = timefolder + now_string + "_sats.txt"
 
-# elements
-red = LED(27)
-white = LED(22)
-green = LED(17)
-iobutton = Button(24)
-iolight = LED(18)
-shutdown_btn = Button(7, hold_time=1)
+savefile = export.createfile()
 
 # initialize serial port for gps
-#os.system("sudo systemctl stop gpsd.socket")
 os.system("sudo gpsd /dev/ttyAMA0 -F /var/run/gpsd.sock")
 port = "/dev/ttyAMA0"
-#/dev/serial0
 serialPort = serial.Serial(port, baudrate = 9600)#, timeout = 0.1)
 #time.sleep(20)
 
-# events functions
-# logging button start
+red = LED(23)
+green = LED(24)
+iobutton = Button(17)
+offbutton = Button(5)
+
 def start():
     print("start")
-    iolight.on()
-    #white.blink()
-# logging button stop
 def stop():
     print("stop")
-    iolight.off()
-    #white.off()
-# Shutdown
 def shutdown():
     global active
     active = False
     print("shutdown")
+    
+iobutton.when_released = stop
+iobutton.when_pressed = start
+offbutton.when_held = shutdown
 
-iobutton.when_released = start
-iobutton.when_pressed = stop
-shutdown_btn.when_held = shutdown
-green.on()
-
-started = False
-epoch = ['']*13
-sats = [None]
 try:
     while active == True:
         green.on()
@@ -81,7 +46,7 @@ try:
             serialData = serialPort.readline()
         except:
             pass
-        if iobutton.is_pressed:
+        if not iobutton.is_pressed:
             pass
         else:
             try:
@@ -90,9 +55,7 @@ try:
             except:
                 print("decode error")
             if nmea != "-":
-                NMEA.Read(nmea)
-
-                """
+                #NMEA.Read(nmea)
                 nmeatype =  nmea[0][3:]
                 #print(nmea)
                 if started == True and nmeatype == 'GGA':
@@ -103,12 +66,6 @@ try:
                         file=open(savefile, 'a')
                         file.write(line)
                         file.close()
-                    if savesat == True and sats[0] != None:
-                        #satline = ",".join(sats) + "\n"
-                        #satfile=open(satsavefile, 'a')
-                        #satfile.write(satline)
-                        #satfile.close()
-                        pass 
                 if nmeatype == "GGA":
                     #print("processing GGA")
                     #print(nmea)
@@ -118,8 +75,6 @@ try:
                         pass
                     else:
                         started = True
-                        
-                        
                         # time
                         timeline = ":".join([nmea[1][0:2], nmea[1][2:4], nmea[1][4:6]])
                         epoch[0] = timeline
@@ -163,25 +118,7 @@ try:
                     epoch[9] = HDOP
                     
                     VDOP = nmea[17].split('*')
-                    epoch[10] = VDOP[0]
-                
-                
-                if started == True and nmeatype == "GSV" and savesat == True:
-                    #print("processing GSA: " + nmea[0][1:3])
-                    #print(nmea)
-                    for i in list(range(4,len(nmea)-1,4)):
-                        PRN = nmea[i]
-                        if PRN != '':
-                            SV_type = nmea[0][1:3]
-                            sats.append(SV_type)
-                            sats.append(PRN)
-                            ele = nmea[i+1]
-                            sats.append(ele)
-                            azi = nmea[i+2]
-                            sats.append(azi)
-                            SNR = nmea[i+3].split('*')
-                            sats.append(SNR[0])
-                        
+                    epoch[10] = VDOP[0]     
                     
                 if started == True and nmeatype == "VTG":
                     #print("processing VTG")
@@ -193,17 +130,11 @@ try:
                     # speed over ground in kph
                     speed = nmea[7]
                     epoch[5] = speed
-                    """
 finally:
-    white.off()
     green.off()
     red.on()
     export.LOGtoGPX(savefile)
-    export.LOGtoGEOJSON(savefile)
-    #export.SATtoJSON(satsavefile)
     time.sleep(0.5)
     red.off()
-    #check_call(['sudo', 'poweroff'])
-    #GPIO.cleanup()
-    
+    GPIO.cleanup()
     
