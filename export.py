@@ -19,9 +19,24 @@ def createfile():
     return savefile
 
 def LOGtoGPX(savefile, pretty=False):
-    import xml.etree.cElementTree as ET
-    gpx = ET.Element("gpx", creator="MotoLogger", version="1.1")
+    import xml.etree.ElementTree as ET
+    ET.register_namespace('gpxtpx',"https://www8.garmin.com/xmlschemas/TrackPointExtensionv2.xsd")
+    gpx = ET.Element("gpx", creator="MotoLogger", version="1.1", xmlns="http://www.topografix.com/GPX/1/1")
+    meta = ET.SubElement(gpx, "metadata")
+    meta_name = ET.SubElement(meta, "name")
+    meta_name.text = "Titel"
+    desc = ET.SubElement(meta, "desc")
+    desc.text = "Bescrhijving van rit"
+    author = ET.SubElement(meta, "author")
+    author_name = ET.SubElement(author, "name")
+    author_name.text = "Stijn Lodder"
+    author_link = ET.SubElement(author, "link", href="http://www.stijnlodder.nl/Dashboard")
+    meta_time = ET.SubElement(meta, "time")
+    meta_time.text = "time"
+
     trk = ET.SubElement(gpx, "trk")
+    trk_name = ET.SubElement(trk, "name")
+    trk_name.text = "Titel"
     trkseg = ET.SubElement(trk, "trkseg")
 
     log = open(savefile, "r")
@@ -32,12 +47,19 @@ def LOGtoGPX(savefile, pretty=False):
         trkpt = ET.SubElement(trkseg, "trkpt", lat=str(line[1]), lon=str(line[2]))
         ele = ET.SubElement(trkpt, "ele")
         ele.text = str(line[3])
-        fix = ET.SubElement(trkpt, "fix")
-        fix.text = "3d"
+        time = ET.SubElement(trkpt, "time")
+        time.text = "time"
+        #fix = ET.SubElement(trkpt, "fix")
+        #fix.text = "3d"
         hdop = ET.SubElement(trkpt, "hdop")
         hdop.text = str(line[5])
+        extensions = ET.SubElement(trkpt, "extensions")
+        gpxtpx = ET.SubElement(extensions, "{https://www8.garmin.com/xmlschemas/TrackPointExtensionv2.xsd}TrackPointExtension")
+        course = ET.SubElement(gpxtpx, "{https://www8.garmin.com/xmlschemas/TrackPointExtensionv2.xsd}course")
+        course.text = str(line[4])
+        speed = ET.SubElement(gpxtpx, "{https://www8.garmin.com/xmlschemas/TrackPointExtensionv2.xsd}speed")
+        speed.text = str(line[5])
         line = log.readline().split(',')
-        #time
     log.close()
     savefile = savefile.strip(".txt")
     tree = ET.ElementTree(gpx)
@@ -140,6 +162,6 @@ def SupplementSpeed(savefile):
     header = log.readline()
     line = log.readline().split(',')
 
-#LOGtoGPX("./data/20122020_011103")
+LOGtoGPX("F:/Projecten/MotoLogger/gpx test/26122020_161723.txt", True)
 #LOGtoGEOJSON("./data/20122020_011103")
 #SATtoJSON("./data/20122020_011103_sats", True)
