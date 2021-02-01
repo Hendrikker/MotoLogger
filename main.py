@@ -11,6 +11,7 @@ started = False
 epoch = ['']*13
 active = True
 savesat = False
+RMC = True
 
 savefile = export.createfile()
 
@@ -57,7 +58,8 @@ try:
             if nmea != "-":
                 #NMEA.Read(nmea)
                 nmeatype =  nmea[0][3:]
-                #print(nmea)
+                print(nmea)
+                
                 if started == True and nmeatype == 'GGA':
                     if epoch[0] != "":
                         print(epoch)
@@ -130,6 +132,23 @@ try:
                     # speed over ground in kph
                     speed = nmea[7]
                     epoch[5] = speed
+                
+                if started == True and nmeatype == 'RMC' and RMC == True:
+                    timestamp = nmea[1]
+                    datestamp = nmea[9]
+                    datestring = "20" + datestamp[:2] + "-" + datestamp[2:4] + "-" + datestamp[4:] + "T" + timestamp[:2] + ":" + timestamp[2:4] + ":" + timestamp[4:] + "+01:00"
+                    print(datestring)
+                    epoch[0] = datestring
+                    '''
+                    latitude = float(nmea[3][0:2]) + float(nmea[3][2:])/60
+                    if nmea[4] == "S":
+                        latitude = -latitude
+                    longitude = float(nmea[5][0:2]) + float(nmea[5][2:])/60
+                    if nmea[6] == "W":
+                        latitude = -latitude
+                    speed = float(nmea[7])
+                    bearing = float(nmea[8])
+                    '''
 finally:
     green.off()
     red.on()

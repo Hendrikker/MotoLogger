@@ -162,6 +162,6 @@ def SupplementSpeed(savefile):
     header = log.readline()
     line = log.readline().split(',')
 
-LOGtoGPX("F:/Projecten/MotoLogger/gpx test/26122020_161723.txt", True)
+#LOGtoGPX("F:/Projecten/MotoLogger/gpx test/26122020_161723.txt", True)
 #LOGtoGEOJSON("./data/20122020_011103")
 #SATtoJSON("./data/20122020_011103_sats", True)
